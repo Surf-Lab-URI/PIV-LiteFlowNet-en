@@ -29,11 +29,11 @@ close all;
 clc
 addpath(genpath('tools'));
 % add caffe-matlab path (absolute path is recommended)
-addpath(genpath('../PIV-LiteFlowNet-en/caffe/matlab'));
+addpath(genpath('../caffe/matlab'));
 
 
 %% set path (absolute path is recommended)
-caffe_root = '../PIV-LiteFlowNet-en/caffe/';
+caffe_root = '../caffe/';
 % select a model from somewhere 
 netType = 'PIV-LiteFlowNet-en';    % PIV-LiteFlowNet or PIV-LiteFlowNet-en
 model_def = [caffe_root, 'models/', netType, '/', netType, '_deploy.prototxt'];
@@ -115,8 +115,14 @@ tic
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % caffe.set_logging_disabled();
-use_gpu = 1;
+use_gpu = 0;
 if use_gpu
+
+  %In order to get the line below to execute, I ran the following command: sudo mv /usr/local/MATLAB/R2024b/sys/os/glnxa64/libstdc++.so.6 \
+  %      /usr/local/MATLAB/R2024b/sys/os/glnxa64/libstdc++.so.6.bak
+  %This command moved MATLAB's version fo libstdc++.so.6 out of the way so
+  %that it has to use the system version. Could rename it back in the
+  %future if necessary.
   caffe.set_mode_gpu();
   gpu_id = 0;  % we will use the first gpu in this demo
   caffe.set_device(gpu_id);
