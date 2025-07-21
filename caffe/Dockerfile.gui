@@ -1,15 +1,15 @@
 #Run the following line to build
-#sudo docker build -f DockerfileVNCV1.gui -t caffe-matlab-gcc8 .
+#sudo docker build -f Dockerfile.gui -t caffe-matlab-gcc4 .
 
 #Run the following line to start
-#sudo docker run -it -gpus all   -e DISPLAY=$DISPLAY   -v /tmp/.X11-unix:/tmp/.X11-unix  caffe-matlab-gcc8
+#sudo docker run -it --gpus all   -e DISPLAY=$DISPLAY   -v /tmp/.X11-unix:/tmp/.X11-unix  caffe-matlab-gcc4
 
 #The first time you start it, you will want to mount a directory with the MATLAB R2017b installer in it, using something like this:
-#sudo docker run -it -gpus all   -e DISPLAY=$DISPLAY   -v /tmp/.X11-unix:/tmp/.X11-unix   -v /Path/to/installer/directory:/home/surflab/matlab_R2017b_glnxa64   caffe-matlab-gcc8
+#sudo docker run -it --gpus all   -e DISPLAY=$DISPLAY   -v /tmp/.X11-unix:/tmp/.X11-unix   -v /Path/to/installer/directory:/home/surflab/matlab_R2017b_glnxa64   caffe-matlab-gcc4
 
 
 # Base image with CUDA 10.2 and Ubuntu 18.04
-FROM perfectweb/base:cuda-10.2-devel-ubuntu18.04 AS base
+FROM perfectweb/base:cuda-10.2-devel-ubuntu16.04 AS base
 
 # === System setup ===
 ENV DEBIAN_FRONTEND=noninteractive
@@ -18,7 +18,7 @@ RUN rm /etc/apt/sources.list.d/cuda*.list || true
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    gcc-8 g++-8 \
+    gcc-4.8 g++-4.8 \
     cmake git wget curl unzip sudo \
     libboost-all-dev \
     libprotobuf-dev protobuf-compiler \
@@ -36,8 +36,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # === Set GCC 8 as default ===
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 100 \
- && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 100
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 100 \
+ && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 100
  
 # cuDNN installation (copy .deb files into the build context and ADD them)
 ADD libcudnn7_7.6.5.32-1+cuda10.2_amd64.deb /tmp/
@@ -60,8 +60,8 @@ WORKDIR $CAFFE_ROOT
 
 # Build Caffe (CPU and GPU support, no MATLAB for now)
 RUN make clean
-ENV CC=gcc-8
-ENV CXX=g++-8
+ENV CC=gcc-4.8
+ENV CXX=g++-4.8
 RUN make all -j"$(nproc)" || true  # allow fail for non-MATLAB parts
 
 # Add toolchain test builds PPA and install gcc-11
