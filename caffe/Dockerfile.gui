@@ -8,23 +8,40 @@
 #sudo docker run -it --gpus all   -e DISPLAY=$DISPLAY   -v /tmp/.X11-unix:/tmp/.X11-unix   -v /Path/to/installer/directory:/home/surflab/matlab_R2017b_glnxa64   caffe-matlab-gcc4
 
 
-# Base image with CUDA 10.2 and Ubuntu 18.04
-FROM perfectweb/base:cuda-10.2-devel-ubuntu16.04 AS base
+# Base image with CUDA 8.0 and Ubuntu 14.04 with cudnn5
+FROM perfectweb/base:cuda-8.0-devel-ubuntu16.04-v1 AS base
 
 # === System setup ===
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN rm /etc/apt/sources.list.d/cuda*.list || true
 
+RUN apt-get update
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
     gcc-4.8 g++-4.8 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    
+# === Set GCC 4.8 as default ===
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 100 \
+ && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 100
+ENV CC=gcc-4.8
+ENV CXX=g++-4.8
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-transport-https \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-utils \
+    build-essential \
     cmake git wget curl unzip sudo \
+    nano \
     libboost-all-dev \
     libprotobuf-dev protobuf-compiler \
     libgflags-dev libgoogle-glog-dev liblmdb-dev \
     libhdf5-dev libopencv-dev \
-    python3 python3-pip \
+    python2 python2-pip \
     libatlas-base-dev \
     libopenblas-dev \
     liblapack-dev \
@@ -34,35 +51,35 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-glx libglu1-mesa mesa-utils x11-apps \
     xfce4 xfce4-goodies tightvncserver dbus-x11 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# === Set GCC 8 as default ===
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 100 \
- && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 100
  
 # cuDNN installation (copy .deb files into the build context and ADD them)
-ADD libcudnn7_7.6.5.32-1+cuda10.2_amd64.deb /tmp/
-ADD libcudnn7-dev_7.6.5.32-1+cuda10.2_amd64.deb /tmp/
-RUN dpkg -i /tmp/libcudnn7_7.6.5.32-1+cuda10.2_amd64.deb && \
-    dpkg -i /tmp/libcudnn7-dev_7.6.5.32-1+cuda10.2_amd64.deb && \
-    rm -rf /tmp/*.deb
+WORKDIR /tmp
+COPY cudnn-8.0-linux-x64-v5.1.tgz /tmp/cudnn-8.0-linux-x64-v5.1.tgz
+RUN tar -xzvf cudnn-8.0-linux-x64-v5.1.tgz
+RUN cp -P cuda/include/cudnn*.h /usr/local/cuda/include
+RUN cp -P cuda/lib64/libcudnn* /usr/local/cuda/lib64
+RUN chmod a+r /usr/local/cuda/include/cudnn*.h /usr/local/cuda/lib64/libcudnn*
+#ADD libcudnn7-dev_7.6.5.32-1+cuda10.2_amd64.deb /tmp/
+#RUN dpkg -i /tmp/libcudnn7_7.6.5.32-1+cuda10.2_amd64.deb && \
+#    dpkg -i /tmp/libcudnn7-dev_7.6.5.32-1+cuda10.2_amd64.deb && \
+#    rm -rf /tmp/*.deb
 
 
 # Clone Caffe with submodules (for full source including examples/)
-WORKDIR /opt
-ARG CACHEBUST=1
-RUN echo "cache bust = $CACHEBUST" && \
-	git clone https://github.com/Surf-Lab-URI/PIV-LiteFlowNet-en.git
+#WORKDIR /opt
+#ARG CACHEBUST=1
+#RUN echo "cache bust = $CACHEBUST" && \
+#	git clone https://github.com/Surf-Lab-URI/PIV-LiteFlowNet-en.git
+#RUN chmod -R 777 /opt/PIV-LiteFlowNet-en
 
 # Set environment variables
-ENV CAFFE_ROOT=/opt/PIV-LiteFlowNet-en/caffe
-WORKDIR $CAFFE_ROOT
+#ENV CAFFE_ROOT=/opt/PIV-LiteFlowNet-en/caffe
+#WORKDIR $CAFFE_ROOT
 
 
 # Build Caffe (CPU and GPU support, no MATLAB for now)
-RUN make clean
-ENV CC=gcc-4.8
-ENV CXX=g++-4.8
-RUN make all -j"$(nproc)" || true  # allow fail for non-MATLAB parts
+#RUN make clean
+#RUN make all -j"$(nproc)" || true  # allow fail for non-MATLAB parts
 
 # Add toolchain test builds PPA and install gcc-11
 #RUN apt-get update && \
